@@ -2,10 +2,14 @@
   <div id="app" class="app-container" style="margin: 50px auto;">
     <!-- <div style="display:block;margin:0 auto;width: 450px;"> -->
     <div>
-      <el-menu :default-active="activeIndex" mode="horizontal" @select="handleSelect" :key="menuKey">
+      <el-tabs v-model="activeIndex" @tab-click="handleSelect">
+        <el-tab-pane label="wiki" name="wiki"></el-tab-pane>
+        <el-tab-pane label="about" name="about"></el-tab-pane>
+      </el-tabs>
+      <!-- <el-menu :default-active="activeIndex" mode="horizontal" @select="handleSelect">
         <el-menu-item index="wiki">wiki</el-menu-item>
         <el-menu-item index="about">about</el-menu-item>
-      </el-menu>
+      </el-menu> -->
       <div style="width: 500px; float:left">
         <el-card style="height:500px; width:500px">
           <canvas id="myCanvas" width="400" height="400" style="margin: 0 auto"></canvas>
@@ -73,7 +77,7 @@ export default {
   data() {
     return {
       //drawer: false,  显示抽屉
-      menuKey: 1,
+      menuKey: '1',
       activeIndex: 'none',
       spf: 4, //step per frame
       length: 100, //边长
@@ -131,16 +135,17 @@ export default {
     formatTooltipT(val) {//格式化温度的slider的tootip
       return Math.pow(10, val).toFixed(2);
     },
-    handleSelect(index){
-      if (index == 'wiki'){
+    handleSelect(tab){
+      if (tab.label == 'wiki'){
         this.wikiEnabled = true;
-      }else if (index == 'about'){
+      }else if (tab.label == 'about'){
 
       }
     },
     dialogClose(){
       this.activeIndex = "none";
-      ++this.menuKey;
+      this.activeIndex = "";
+      //this.menuKey=this.menuKey=='1'?'0':'1';
     },
     act3() {
       //主要模拟函数
