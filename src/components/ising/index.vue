@@ -1,49 +1,69 @@
 <template>
   <div id="app" class="app-container" style="margin: 50px auto;">
-    <div style="display:block;margin:0 auto;width: 450px;">
-      <div>
-        <canvas id="myCanvas" width="400" height="400" style="margin: 0 auto"></canvas>
+    <!-- <div style="display:block;margin:0 auto;width: 450px;"> -->
+    <div>
+      <el-menu :default-active="activeIndex" mode="horizontal" @select="handleSelect" :key="menuKey">
+        <el-menu-item index="wiki">wiki</el-menu-item>
+        <el-menu-item index="about">about</el-menu-item>
+      </el-menu>
+      <div style="width: 500px; float:left">
+        <el-card style="height:500px; width:500px">
+          <canvas id="myCanvas" width="400" height="400" style="margin: 0 auto"></canvas>
+        </el-card>
+        
       </div>
-      <div>
-        <el-row>
-          格子边长
-          <el-select v-model="length" style="width: 80px" @change="go">
-            <el-option
-              v-for="item in sizeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            ></el-option>
-          </el-select>上
-          <el-color-picker v-model="upColor" color-format="rgb" @change="refresh"></el-color-picker>下
-          <el-color-picker v-model="downColor" color-format="rgb" @change="refresh"></el-color-picker>
-        </el-row>
-        <el-row>
-          β
-          <el-slider
-            v-model="beta"
-            :min="Number(0.01)"
-            :max="Number(2)"
-            :step="Number(0.01)"
-            id="beta"
-          ></el-slider>
-        </el-row>
-        <el-row>
-          每帧步数
-          <el-slider
-            v-model="spf"
-            :min="Number(1)"
-            :max="Number(10001)"
-            :step="Number(1000)"
-            id="spf"
-          ></el-slider>
-        </el-row>
+      <div style="float: right">
+        <el-card style="height: 500px; width: 400px">
+          <el-row>
+            格子边长
+            <el-select v-model="length" style="width: 80px" @change="go">
+              <el-option
+                v-for="item in sizeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              ></el-option>
+            </el-select>上
+            <el-color-picker v-model="upColor" color-format="rgb" @change="refresh"></el-color-picker>下
+            <el-color-picker v-model="downColor" color-format="rgb" @change="refresh"></el-color-picker>
+          </el-row>
+          <el-row>
+            温度
+            <el-slider
+              v-model="temperature"
+              :min="Number(-2)"
+              :max="Number(1)"
+              :step="Number(0.05)"
+              id="temperature"
+              :format-tooltip="formatTooltipT"
+            ></el-slider>
+          </el-row>
+          <el-row>
+            每帧步数
+            <el-slider
+              v-model="spf"
+              :min="Number(0)"
+              :max="Number(11)"
+              :step="Number(1)"
+              id="spf"
+              :format-tooltip="formatTooltipSpf"
+            ></el-slider>
+          </el-row>
 
-        <el-button @click="act2" type="primary">下一步</el-button>
-        <el-button @click="running = true;act3()" type="primary">开始</el-button>
-        <el-button @click="go" type="primary">初始化</el-button>
-        <el-button @click="stopAnimation" type="danger">停止</el-button>
+          <el-button @click="act2" type="primary">下一步</el-button>
+          <el-button @click="running = true;act3()" type="primary">开始</el-button>
+          <el-button @click="go" type="primary">初始化</el-button>
+          <el-button @click="stopAnimation" type="danger">停止</el-button>
+        </el-card>
       </div>
+      <el-dialog title="wiki" 
+      :visible.sync="wikiEnabled" 
+      width="80%"
+      @close="dialogClose">
+        <iframe src="https://zh.wikipedia.org/wiki/%E6%98%93%E8%BE%9B%E6%A8%A1%E5%9E%8B" 
+          width="100%" height="400px"></iframe>
+      </el-dialog>
+      
     </div>
   </div>
 </template>
@@ -53,9 +73,11 @@ export default {
   data() {
     return {
       //drawer: false,  显示抽屉
-      spf: 1000, //step per frame
+      menuKey: 1,
+      activeIndex: 'none',
+      spf: 4, //step per frame
       length: 100, //边长
-      beta: 1,
+      temperature: 0,
       upColor: "rgb(255, 255, 255)",
       downColor: "rgb(0, 0, 0)",
       //showX: 0,
@@ -68,6 +90,9 @@ export default {
       //stop: '',       //控制暂停 用running代替
       image: "", //绘制图像
       running: false, //控制运行
+      wikiEnabled: false,//wiki弹窗可见
+      aboutEnabled: false,//about弹窗可见
+      spfOptions: [1, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000],
       sizeOptions: [
         {
           value: 25,
@@ -94,21 +119,40 @@ export default {
   },
   created() {
     setTimeout(() => {
-      this.go();
-    }, 100);
+      this.go();//初始化
+      this.running = true;//初始化结束开始运行
+      this.act3();
+    }, 100);//延迟100ms调用初始化 避免找不到组件
   },
   methods: {
+    formatTooltipSpf(val) {//格式化spf的slider的tootip
+      return this.spfOptions[val];
+    },
+    formatTooltipT(val) {//格式化温度的slider的tootip
+      return Math.pow(10, val).toFixed(2);
+    },
+    handleSelect(index){
+      if (index == 'wiki'){
+        this.wikiEnabled = true;
+      }else if (index == 'about'){
+
+      }
+    },
+    dialogClose(){
+      this.activeIndex = "none";
+      ++this.menuKey;
+    },
     act3() {
       //主要模拟函数
       if (this.running) {
-        for (let loop = 0; loop < this.spf; loop++) {
+        for (let loop = 0; loop < this.spfOptions[this.spf] ; loop++) {
           let element = parseInt(Math.random() * this.length * this.length);
           let x = element % this.length;
           let y = parseInt(element / this.length);
           let energy = this.getEnergy(x, y);
           let deltaEnergy = energy * -2;
-          let beta = this.beta;
-          let prob = Math.exp(-deltaEnergy * beta);
+          let T = Math.pow(10, this.temperature).toFixed(2);
+          let prob = Math.exp(-deltaEnergy / T);
           if (Math.random() < prob) {
             this.arr[x][y] *= -1;
             this.draw(x, y);
@@ -177,9 +221,8 @@ export default {
       // this.cxt.fillRect(400*x/this.length,400*y/this.length,400/this.length,400/this.length);
     },
     stopAnimation() {
-      //已弃用
       this.running = false;
-      if (this.stop != "") window.cancelAnimationFrame(this.stop);
+      if (this.stop != "") window.cancelAnimationFrame(this.stop);//已弃用
     },
     refresh() {
       //刷新画布所有像素
@@ -246,8 +289,8 @@ export default {
         let y = parseInt(element / this.length);
         let energy = this.getEnergy(x, y);
         let deltaEnergy = energy * -2;
-        let beta = this.beta;
-        let prob = Math.exp(-deltaEnergy * beta);
+        let T = Math.pow(10, this.temperature).toFixed(2);
+        let prob = Math.exp(-deltaEnergy / T);
         //window.console.log('probability:' + prob);
         if (Math.random() < prob) {
           this.arr[x][y] *= -1;
@@ -264,9 +307,9 @@ export default {
       //   //window.console.log('x:'+x+' y:'+y);
       //   let eup = this.getEnergy(x, y)*this.arr[x][y];
       //   let edown = -eup;
-      //   let beta = this.beta;
-      //   let pup = Math.exp(-eup*beta);
-      //   let pdown = Math.exp(-edown*beta);
+      //   let T = this.T;
+      //   let pup = Math.exp(-eup/T);
+      //   let pdown = Math.exp(-edown/T);
       //   let probup = pup/(pup+pdown);
       //   if (Math.random() < probup){
       //     this.arr[x][y] = 1;

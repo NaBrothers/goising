@@ -8,7 +8,11 @@ Vue.use(Router)
 export default new Router({
     routes: [
         {
-            path:'/', 
+            path:'/',
+            redirect:'/ising'
+        },
+        {
+            path:'/ising', 
             component: () => import('@/components/ising/index'),
             name: 'ising'
         }
