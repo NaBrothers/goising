@@ -1,23 +1,22 @@
 <template>
-  <div id="app" class="app-container" style="margin: 50px auto;">
+  <div id="app" class="app-container">
     <!-- <div style="display:block;margin:0 auto;width: 450px;"> -->
     <div>
-      <el-tabs v-model="activeIndex" @tab-click="handleSelect">
-        <el-tab-pane label="wiki" name="wiki"></el-tab-pane>
-        <el-tab-pane label="about" name="about"></el-tab-pane>
+      <div class = "tab-container">
+      <el-tabs v-model="activeIndex" @tab-click="handleSelect" class = "tabs">
+        <el-tab-pane label="wiki" name="wiki" class = "tab"></el-tab-pane>
+        <el-tab-pane label="about" name="about" class = "tab"></el-tab-pane>
       </el-tabs>
+      </div>
       <!-- <el-menu :default-active="activeIndex" mode="horizontal" @select="handleSelect">
         <el-menu-item index="wiki">wiki</el-menu-item>
         <el-menu-item index="about">about</el-menu-item>
       </el-menu> -->
-      <div style="width: 500px; float:left">
-        <el-card style="height:500px; width:500px">
-          <canvas id="myCanvas" width="400" height="400" style="margin: 0 auto"></canvas>
+      <div class = "main">
+        <el-card class = "canvas-container">
+          <canvas id="myCanvas" width="400" height="400"></canvas>
         </el-card>
-        
-      </div>
-      <div style="float: right">
-        <el-card style="height: 500px; width: 400px">
+        <el-card class = "panel">
           <el-row>
             格子边长
             <el-select v-model="length" style="width: 80px" @change="go">
