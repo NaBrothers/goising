@@ -14,7 +14,7 @@
       </el-menu> -->
       <div class = "main">
         <el-card class = "canvas-container">
-          <canvas id="myCanvas" width="400" height="400"></canvas>
+          <canvas id="myCanvas" width="512" height="512"></canvas>
         </el-card>
         <el-card class = "panel">
           <el-row>
@@ -79,7 +79,7 @@ export default {
       menuKey: '1',
       activeIndex: 'none',
       spf: 4, //step per frame
-      length: 100, //边长
+      length: 128, //边长
       temperature: 0,
       upColor: "rgb(255, 255, 255)",
       downColor: "rgb(0, 0, 0)",
@@ -98,24 +98,24 @@ export default {
       spfOptions: [1, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000],
       sizeOptions: [
         {
-          value: 25,
-          label: "25"
+          value: 32,
+          label: "32"
         },
         {
-          value: 50,
-          label: "50"
+          value: 64,
+          label: "64"
         },
         {
-          value: 100,
-          label: "100"
+          value: 128,
+          label: "128"
         },
         {
-          value: 200,
-          label: "200"
+          value: 256,
+          label: "256"
         },
         {
-          value: 400,
-          label: "400"
+          value: 512,
+          label: "512"
         }
       ]
     };
@@ -149,20 +149,28 @@ export default {
     act3() {
       //主要模拟函数
       if (this.running) {
-        for (let loop = 0; loop < this.spfOptions[this.spf] ; loop++) {
-          let element = parseInt(Math.random() * this.length * this.length);
-          let x = element % this.length;
-          let y = parseInt(element / this.length);
+        let length = this.length;
+        let pixelMethod = length>100;
+        let stepPF = this.spfOptions[this.spf];
+        let temp = this.temperature;
+        for (let loop = 0; loop < stepPF ; loop++) {
+          let element = parseInt(Math.random() * length * length);
+          let x = element % length;
+          let y = parseInt(element / length);
           let energy = this.getEnergy(x, y);
           let deltaEnergy = energy * -2;
-          let T = Math.pow(10, this.temperature).toFixed(2);
+          let T = Math.pow(10, temp).toFixed(2);
           let prob = Math.exp(-deltaEnergy / T);
           if (Math.random() < prob) {
             this.arr[x][y] *= -1;
-            this.draw(x, y);
+            if (pixelMethod)
+              this.draw(x, y);
+            else
+              this.draw2(x, y);
           }
         }
-        this.cxt.putImageData(this.image, 0, 0); //刷新画布
+        if (pixelMethod)
+          this.cxt.putImageData(this.image, 0, 0); //刷新画布
       }
       setTimeout(() => {
         //间隔1ms 递归调用
@@ -182,11 +190,13 @@ export default {
       this.stop = window.requestAnimationFrame(this.act);
     },
     draw(x, y) {
-      //绘制坐标为xy点的矩阵的image
+      //绘制坐标为xy点的矩阵的image(格子小时的快速方法)
+      let length = this.length;
+      let bitwise = Math.log2(length);
       var r, g, b;
       var up = JSON.parse(JSON.stringify(this.upColor));
       var down = JSON.parse(JSON.stringify(this.downColor));
-      if (this.arr[x][y] == 1) {
+      if ((this.arr[x][y]+1)>>1 & 1) {
         up = up.split("(")[1];
         up = up.split(")")[0];
         up = up.split(", ");
@@ -202,27 +212,33 @@ export default {
         b = parseInt(down[2]);
       }
       for (
-        let px = (400 * x) / this.length;
-        px < (400 * (x + 1)) / this.length;
+        let px = (x<<9)>>bitwise;
+        px < ((x + 1)<<9)>>bitwise;
         px++
       ) {
         for (
-          let py = (400 * y) / this.length;
-          py < (400 * (y + 1)) / this.length;
+          let py = (y<<9)>>bitwise;
+          py < ((y + 1)<<9)>>bitwise;
           py++
         ) {
-          var index = (px + py * this.image.width) * 4;
+          var index = (px + py * this.image.width)<<2;
           this.image.data[index + 0] = r;
           this.image.data[index + 1] = g;
           this.image.data[index + 2] = b;
         }
       }
 
-      // if (this.arr[x][y] == -1)
-      //   this.cxt.fillStyle="#000000";
-      // else
-      //   this.cxt.fillStyle="#FFFFFF";
-      // this.cxt.fillRect(400*x/this.length,400*y/this.length,400/this.length,400/this.length);
+      
+    },
+    draw2(x, y){
+      //格子大时的方法
+      let length = this.length;
+      let bitwise = Math.log2(length);
+      if ((this.arr[x][y]+1)>>1 & 1)
+        this.cxt.fillStyle=this.upColor;
+      else
+        this.cxt.fillStyle=this.downColor;
+      this.cxt.fillRect(x<<9>>bitwise,y<<9>>bitwise,512>>bitwise,512>>bitwise);
     },
     stopAnimation() {
       this.running = false;
@@ -239,11 +255,13 @@ export default {
     },
     go() {
       //矩阵与画布初始化
-      window.console.log(this.upColor);
+      //window.console.log(this.upColor);
       this.arr = new Array();
       this.c = document.getElementById("myCanvas");
       this.cxt = this.c.getContext("2d");
       this.image = this.cxt.createImageData(this.c.width, this.c.height);
+      let length = this.length;
+      let pixelMethod = length >100;
       for (var i = 0; i < this.image.data.length; i += 4) {
         //image.data[i] = 255;
         //image.data[i+1] = 255;
@@ -255,10 +273,14 @@ export default {
         for (var y = 0; y < this.length; y++) {
           if (Math.round(Math.random()) == 0) this.arr[x][y] = -1;
           else this.arr[x][y] = 1;
-          this.draw(x, y);
+          if (pixelMethod)
+            this.draw(x, y);
+          else
+            this.draw2(x, y);
         }
       }
-      this.cxt.putImageData(this.image, 0, 0);
+      if (pixelMethod)
+        this.cxt.putImageData(this.image, 0, 0);
       this.drawer = false;
     },
     next() {
@@ -283,17 +305,19 @@ export default {
     },
     next2() {
       //分步模拟
-      var newArray = [...new Array(this.length * this.length).keys()];
+      let length = this.length;
+      let temp = this.temperature;
+      var newArray = [...new Array(length * length).keys()];
       newArray.sort(() => {
         return 0.5 - Math.random();
       });
       let count = 0;
       newArray.forEach(element => {
         let x = element % this.length;
-        let y = parseInt(element / this.length);
+        let y = parseInt(element / length);
         let energy = this.getEnergy(x, y);
         let deltaEnergy = energy * -2;
-        let T = Math.pow(10, this.temperature).toFixed(2);
+        let T = Math.pow(10, temp).toFixed(2);
         let prob = Math.exp(-deltaEnergy / T);
         //window.console.log('probability:' + prob);
         if (Math.random() < prob) {
