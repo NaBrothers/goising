@@ -31,6 +31,10 @@
             <el-color-picker v-model="downColor" color-format="rgb" @change="refresh"></el-color-picker>
           </el-row>
           <el-row>
+            <el-radio v-model="simulateMode" label="metropolis">metropolis</el-radio>
+            <el-radio v-model="simulateMode" label="wolff-cluster">wolff-cluster</el-radio>
+          </el-row>
+          <el-row>
             温度
             <el-slider
               v-model="temperature"
@@ -76,6 +80,7 @@ export default {
   data() {
     return {
       //drawer: false,  显示抽屉
+      simulateMode: 'metropolis',
       menuKey: '1',
       activeIndex: 'none',
       spf: 4, //step per frame
@@ -146,9 +151,94 @@ export default {
       this.activeIndex = "";
       //this.menuKey=this.menuKey=='1'?'0':'1';
     },
+    act4() {
+      //wolff算法
+      if (this.running && this.simulateMode == "wolff-cluster"){
+        let length = this.length;
+        let pixelMethod = length>100;
+        let stepPF = this.spfOptions[this.spf];
+        let temp = this.temperature;
+        //for (let loop = 0; loop < stepPF; loop ++){
+          let element = parseInt(Math.random() * length * length);
+          // let cluster = [{
+          //   'x': element % length,
+          //   'y': parseInt(element / length)
+          // }];
+          let cluster = new Array(length);
+          for (let i = 0; i < length; i++)
+            cluster[i] = new Array(length).fill(0);
+          let Fold = [{
+            'x': element % length,
+            'y': parseInt(element / length)
+          }];
+          while (Fold.length != 0){
+            let Fnew = [];
+            for (let a = 0; a < Fold.length; a++){
+              let i = Fold[a];
+              for ( let p = -1; p <= 1; p += 2)
+                for ( let q = -1; q <= 1; q += 2){ //遍历neighbor
+                  let j = {};
+                  j.x = (i.x + ( p + q ) / 2 + length) % length;
+                  j.y = (i.y + ( p - q ) / 2 + length) % length;
+                  if (this.arr[i.x][i.y] == this.arr[j.x][j.y] && 
+                  // !cluster.find(point => {
+                  //   return point.x==j.x&&point.y==j.y;
+                  // })
+                  cluster[j.x][j.y] == 0
+                  )//状态相同为同一族群
+                  {
+                    let T = Math.pow(10, temp).toFixed(2);
+                    let prob = Math.exp(-2/T);
+                    if (Math.random() > prob){
+                      Fnew.push(j);
+                      // cluster.push(j);
+                      cluster[j.x][j.y] = 1;
+                    }
+                  }
+                }
+            }
+            Fold = Fnew;
+          }
+          //console.log(cluster);
+          //for( let i = 0; i < cluster.length; i++){
+            for( let i = 0; i < length; i++)
+            for( let j = 0; j < length; j++){
+            //this.arr[cluster[i].x][cluster[i].y] *= -1;
+            if (cluster[i][j] == 1){
+              this.arr[i][j]*=-1;
+              if (pixelMethod)
+                //this.draw(cluster[i].x, cluster[i].y);
+                this.draw(i,j);
+              else
+                //this.draw2(cluster[i].x, cluster[i].y);
+                this.draw2(i,j);
+            }
+              
+          }
+        //}
+        if (pixelMethod)
+          this.cxt.putImageData(this.image, 0, 0); //刷新画布
+      }else if (this.running && this.simulateMode == "metropolis")
+        this.act3();
+      setTimeout(() => {
+        //间隔1ms 递归调用
+        this.act4();
+      }, 1);
+    },
     act3() {
-      //主要模拟函数
-      if (this.running) {
+      //metropolis方法
+      let firstarr = [{
+        'x': 1,
+        'y': 2
+      },{
+        'x': 2,
+        'y': 3
+      }];
+      let secondarr = {
+        'x': 1,
+        'y': 2
+      };
+      if (this.running && this.simulateMode == 'metropolis') {
         let length = this.length;
         let pixelMethod = length>100;
         let stepPF = this.spfOptions[this.spf];
@@ -171,7 +261,8 @@ export default {
         }
         if (pixelMethod)
           this.cxt.putImageData(this.image, 0, 0); //刷新画布
-      }
+      }else if (this.running && this.simulateMode == "wolff-cluster")
+        this.act4();
       setTimeout(() => {
         //间隔1ms 递归调用
         this.act3();
@@ -348,22 +439,18 @@ export default {
     },
     getEnergy(x, y) {
       //获取xy坐标点的能量值
+      let length = this.length;
       x = Number(x);
       y = Number(y);
-      if (x < 0 || (x >= this.length) | (y < 0) || y >= this.length) {
+      if (x < 0 || (x >= length) | (y < 0) || y >= length) {
         //window.console.log('false');
         return 0;
       } else {
-        let left = 0;
-        let right = 0;
-        let up = 0;
-        let down = 0;
-        let energy = 0;
-        if (x != 0) left = this.arr[x - 1][y];
-        if (x != this.length - 1) right = this.arr[x + 1][y];
-        if (y != 0) up = this.arr[x][y - 1];
-        if (y != this.length - 1) down = this.arr[x][y + 1];
-        energy = -this.arr[x][y] * (left + right + up + down);
+        let sum = 0;
+        for ( let i = -1; i <= 1; i += 2)
+          for ( let j = -1; j <= 1; j += 2)
+            sum += this.arr[(x+(i+j)/2+length)%length][(y+(i-j)/2+length)%length];
+        let energy = -this.arr[x][y] * sum;
         //window.console.log(energy);
         this.energy = energy;
         return energy;
