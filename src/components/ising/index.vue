@@ -36,7 +36,12 @@
             <el-radio v-model="simulateMode" label="wolff-cluster">wolff-cluster</el-radio>
           </el-row>
           <el-row>
+            磁化率
+            <span>{{magSus}}</span>
+          </el-row>
+          <el-row>
             温度
+            <span>{{Math.pow(10, temperature).toFixed(2)}}</span>
             <el-slider
               v-model="temperature"
               :min="Number(-2)"
@@ -48,6 +53,7 @@
           </el-row>
           <el-row>
             每帧步数
+            <span>{{spfOptions[spf]}}</span>
             <el-slider
               v-model="spf"
               :min="Number(0)"
@@ -87,6 +93,8 @@ export default {
       spf: 4, //step per frame
       length: 128, //边长
       temperature: 0,
+      arrSum: 0,
+      magSus: 0,
       upColor: "rgb(255, 255, 255)",
       downColor: "rgb(0, 0, 0)",
       //showX: 0,
@@ -181,10 +189,17 @@ export default {
             let pdown = Math.exp(-edown/T);
             let probup = pup/(pup+pdown);
             if (Math.random() < probup){
-              this.arr[x][y] = 1;
+              if (this.arr[x][y] == -1){
+                this.arr[x][y] = 1;
+                this.arrSum += 2;
+              }
             }else{
-              this.arr[x][y] = -1;
+              if (this.arr[x][y] == 1){
+                this.arr[x][y] = -1;
+                this.arrSum -= 2;
+              }
             }
+            this.magSus = Math.pow(this.arrSum/length/length, 2);
             if (pixelMethod)
               this.draw(x, y);
             else
@@ -259,6 +274,8 @@ export default {
               //this.arr[cluster[i].x][cluster[i].y] *= -1;
               if (cluster[i][j] == 1){
                 this.arr[i][j]*=-1;
+                this.arrSum += this.arr[i][j]*2;
+                this.magSus = Math.pow(this.arrSum/length/length, 2);
                 if (pixelMethod)
                   //this.draw(cluster[i].x, cluster[i].y);
                   this.draw(i,j);
@@ -302,6 +319,8 @@ export default {
             let prob = Math.exp(-deltaEnergy / T);
             if (Math.random() < prob) {
               this.arr[x][y] *= -1;
+              this.arrSum += this.arr[x][y]*2;
+              this.magSus = Math.pow(this.arrSum/length/length, 2);
               if (pixelMethod)
                 this.draw(x, y);
               else
@@ -401,6 +420,7 @@ export default {
     go() {
       //矩阵与画布初始化
       //window.console.log(this.upColor);
+      let sum = 0;
       this.arr = new Array();
       this.c = document.getElementById("myCanvas");
       this.cxt = this.c.getContext("2d");
@@ -416,14 +436,20 @@ export default {
       for (var x = 0; x < this.length; x++) {
         this.arr[x] = new Array();
         for (var y = 0; y < this.length; y++) {
-          if (Math.round(Math.random()) == 0) this.arr[x][y] = -1;
-          else this.arr[x][y] = 1;
+          if (Math.round(Math.random()) == 0) {
+            this.arr[x][y] = -1;
+            sum += -1;
+          }else {
+            this.arr[x][y] = 1;
+            sum += 1;
+          }
           if (pixelMethod)
             this.draw(x, y);
           else
             this.draw2(x, y);
         }
       }
+      this.arrSum = sum;
       if (pixelMethod)
         this.cxt.putImageData(this.image, 0, 0);
       this.drawer = false;
